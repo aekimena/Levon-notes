@@ -13,7 +13,8 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon2 from 'react-native-vector-icons/Ionicons';
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import {useDispatch, useSelector} from 'react-redux';
-import AddTodoModal from '../components/AddTodoModal';
+import AddTodoModal from '../Modals/AddTodoModal';
+import DatePicker from 'react-native-date-picker';
 import {
   addTodo,
   completeTodo,
@@ -23,6 +24,16 @@ import {
   selectToDelete,
 } from '../redux/features/todosCollection';
 import {TodosContext} from '../contexts/todosContext';
+import TodoConfirmationModal from '../Modals/TodoConfirmationModal';
+
+// representation of the month index
+const monthRep = {
+  1: 'January',
+  2: 'February',
+  3: 'March',
+  4: 'April',
+  5: 'May',
+};
 
 const TodosScreen = () => {
   const {
@@ -49,14 +60,53 @@ const TodosScreen = () => {
 
   // these states are for setting alert if provided
   const [alertProvided, setAlertProvided] = useState(false);
-  const [month, setMonth] = useState(null);
-  const [day, setDay] = useState(null);
-  const [minute, setMinute] = useState(null);
-  const [hour, setHour] = useState(null);
-  const [year, setYear] = useState(null);
 
   const noItemSelected = todos.findIndex(obj => obj.selected == true); // check if no todos are aelected
   const allItemSelected = todos.filter(todo => todo.selected == true); // get all selected todos
+
+  const [date, setDate] = useState(new Date());
+  const [openDatePicker, setOpenDatePicker] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedMinute, setSelectedMinute] = useState(null);
+  const [selectedHour, setSelectedHour] = useState(null);
+
+  const dateString = `${monthRep[selectedMonth]} ${selectedDate}, ${selectedYear} ${selectedHour}:${selectedMinute}`;
+
+  // get date from the selected date
+  function extractDate(date) {
+    setSelectedYear(date.getFullYear());
+    setSelectedMonth(date.getMonth() + 1);
+    setSelectedDate(date.getDate());
+    setSelectedHour(date.getHours());
+    setSelectedMinute(date.getMinutes());
+  }
+
+  // set all date state back to default
+  function setToDefault() {
+    setAlertProvided(false);
+    setSelectedYear(null);
+    setSelectedMonth(null);
+    setSelectedDate(null);
+    setSelectedHour(null);
+    setSelectedMinute(null);
+  }
+
+  // function when a todo item is clicked
+  function showFocusItem(item) {
+    setFocusItem(item);
+    setAlertProvided(item.alertProvided);
+    setSelectedYear(item.alertTime.year);
+    setSelectedMonth(item.alertTime.month);
+    setSelectedDate(item.alertTime.day);
+    setSelectedHour(item.alertTime.hour);
+    setSelectedMinute(item.alertTime.minute);
+
+    setEditMode(true);
+    setTodoNote(item.body);
+    setAddBoxShown(true);
+  }
 
   // handle select all or select none
   function setAllSelectedTrue() {
@@ -75,18 +125,43 @@ const TodosScreen = () => {
     switch (editMode) {
       case true:
         const index = todos.findIndex(obj => obj.id === focusItem.id);
-        if (todoNote === todos[index].body) {
+        // if the todo item is still the same
+        if (
+          todoNote === todos[index].body &&
+          todos[index].alertTime.year == selectedYear &&
+          todos[index].alertTime.month == selectedMonth &&
+          todos[index].alertTime.day == selectedDate &&
+          todos[index].alertTime.hour == selectedHour &&
+          todos[index].alertTime.minute == selectedMinute &&
+          todos[index].alertProvided == alertProvided
+        ) {
           setAddBoxShown(false);
           setEditMode(false);
           setTodoNote('');
         } else {
-          dispatch(editTodo({...focusItem, body: todoNote}));
+          // update the todo item
+          dispatch(
+            editTodo({
+              ...focusItem,
+              body: todoNote,
+              alertProvided: alertProvided,
+              alertTime: {
+                month: selectedMonth,
+                year: selectedYear,
+                hour: selectedHour,
+                minute: selectedMinute,
+                day: selectedDate,
+              },
+            }),
+          );
           setAddBoxShown(false);
           setEditMode(false);
+          setToDefault();
           setTodoNote('');
         }
         break;
       case false:
+        // create new todo
         dispatch(
           addTodo({
             id: `id_${Date.now()}`,
@@ -94,11 +169,11 @@ const TodosScreen = () => {
             completed: false,
             alertProvided: alertProvided,
             alertTime: {
-              month: month,
-              day: day,
-              minute: minute,
-              hour: hour,
-              year: year,
+              month: selectedMonth,
+              day: selectedDate,
+              minute: selectedMinute,
+              hour: selectedHour,
+              year: selectedYear,
             },
           }),
         );
@@ -134,10 +209,11 @@ const TodosScreen = () => {
     return (
       <Pressable
         onPress={() => {
-          setFocusItem(item);
-          setEditMode(true);
-          setTodoNote(item.body);
-          setAddBoxShown(true);
+          if (anyTodoItemSelected) {
+            null;
+          } else {
+            showFocusItem(item);
+          }
         }}
         onLongPress={() => {
           setIsTodoItemSelected(true);
@@ -229,6 +305,7 @@ const TodosScreen = () => {
     },
     todoBox: {
       borderRadius: 10,
+      gap: 5,
       width: '100%',
       height: 'auto',
       flexDirection: 'row',
@@ -238,12 +315,31 @@ const TodosScreen = () => {
       paddingVertical: 20,
     },
   });
+
   return (
     <SafeAreaView
       style={{flex: 1, backgroundColor: currentBgColor, paddingTop: 15}}>
       <StatusBar
         barStyle={colorScheme == 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={currentBgColor}
+      />
+      <TodoConfirmationModal />
+
+      <DatePicker
+        modal
+        textColor={themeColor}
+        minimumDate={date}
+        open={openDatePicker}
+        date={date}
+        onConfirm={date => {
+          setDate(date);
+          extractDate(date);
+          setAlertProvided(true);
+          setOpenDatePicker(false);
+        }}
+        onCancel={() => {
+          setOpenDatePicker(false);
+        }}
       />
 
       <View style={{gap: 20, paddingVertical: 10, paddingHorizontal: 15}}>
@@ -311,7 +407,7 @@ const TodosScreen = () => {
               style={{
                 color: filterBtn == 0 ? '#fff' : currentTextColor,
                 fontWeight: '400',
-                fontSize: 20,
+                fontSize: 18,
               }}>
               All
             </Text>
@@ -329,7 +425,7 @@ const TodosScreen = () => {
               style={{
                 color: filterBtn == 1 ? '#fff' : currentTextColor,
                 fontWeight: '400',
-                fontSize: 20,
+                fontSize: 18,
               }}>
               Completed
             </Text>
@@ -347,9 +443,9 @@ const TodosScreen = () => {
               style={{
                 color: filterBtn == 2 ? '#fff' : currentTextColor,
                 fontWeight: '400',
-                fontSize: 20,
+                fontSize: 18,
               }}>
-              Uncompleted
+              Undone
             </Text>
           </Pressable>
         </View>
@@ -384,6 +480,10 @@ const TodosScreen = () => {
         saveNewTodo={saveNewTodo}
         editMode={editMode}
         setEditMode={setEditMode}
+        alertProvided={alertProvided}
+        dateString={dateString}
+        setOpenDatePicker={setOpenDatePicker}
+        setToDefault={setToDefault}
       />
     </SafeAreaView>
   );

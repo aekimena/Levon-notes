@@ -17,6 +17,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import Modal from 'react-native-modal';
 import {useDispatch, useSelector} from 'react-redux';
 import {deleteNote, editNote} from '../redux/features/notescCollection';
+import EditScreenModal from '../Modals/EditScreenModal';
 
 const EditNote = () => {
   const colorScheme = useColorScheme();
@@ -34,6 +35,7 @@ const EditNote = () => {
   const [bodyIsFocus, setBodyIsFocus] = useState(false);
   const focusRef = useRef(null);
   const notes = useSelector(state => state.notesCollection.notesArray);
+  const [showModal, setShowModal] = useState(false);
 
   const innerStyle = StyleSheet.create({
     headerContainer: {
@@ -64,9 +66,8 @@ const EditNote = () => {
   }
 
   function handleDelete() {
-    setMenuVisible(!menuVisible);
-    dispatch(deleteNote(item));
-    navigation.goBack();
+    setMenuVisible(false);
+    setShowModal(true);
   }
 
   function handleEdit() {
@@ -136,6 +137,11 @@ const EditNote = () => {
   return (
     <SafeAreaView style={{backgroundColor: currentBgColor, flex: 1}}>
       <MenuModal />
+      <EditScreenModal
+        showModal={showModal}
+        setShowModal={setShowModal}
+        item={item}
+      />
       <View style={innerStyle.headerContainer}>
         <View style={{flexDirection: 'row', alignItems: 'center', gap: 20}}>
           <Pressable onPress={goBack}>

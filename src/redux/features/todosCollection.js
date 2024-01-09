@@ -16,10 +16,7 @@ export const todosCollection = createSlice({
         obj => obj.id == action.payload.id,
       );
 
-      updatedArray[updatedObjIndex] = {
-        ...updatedArray[updatedObjIndex],
-        body: action.payload.body,
-      };
+      updatedArray[updatedObjIndex] = {...action.payload};
 
       state.todosArray = [...updatedArray];
     },

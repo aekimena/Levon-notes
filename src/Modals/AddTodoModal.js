@@ -1,4 +1,5 @@
 import {
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +11,7 @@ import {
 import React, {useContext, useState} from 'react';
 import Modal from 'react-native-modal';
 import Icon2 from 'react-native-vector-icons/Ionicons';
+import Icon from 'react-native-vector-icons/FontAwesome6';
 
 import {TodosContext} from '../contexts/todosContext';
 
@@ -19,6 +21,10 @@ const AddTodoModal = ({
   saveNewTodo,
   editMode,
   setEditMode,
+  setOpenDatePicker,
+  alertProvided,
+  dateString,
+  setToDefault,
 }) => {
   const colorScheme = useColorScheme();
   const themeColor = '#60B1D6';
@@ -35,6 +41,14 @@ const AddTodoModal = ({
           editMode
             ? (setEditMode(false), setAddBoxShown(false))
             : setAddBoxShown(false);
+          setToDefault();
+        }}
+        onBackButtonPress={() => {
+          setTodoNote('');
+          editMode
+            ? (setEditMode(false), setAddBoxShown(false))
+            : setAddBoxShown(false);
+          setToDefault();
         }}
         animationIn="bounceInUp"
         animationOut="bounceOutDown"
@@ -96,28 +110,52 @@ const AddTodoModal = ({
                 width: '100%',
               }}>
               <View
-                style={{
-                  backgroundColor: colorScheme == 'dark' ? '#222' : '#ECECEC',
-                  paddingVertical: 8,
-                  paddingHorizontal: 18,
-                  borderRadius: 10,
-                }}>
-                <View
-                  style={{flexDirection: 'row', alignItems: 'center', gap: 5}}>
-                  <Icon2
-                    name="alarm-outline"
-                    color={currentTextColor}
-                    size={20}
-                  />
-                  <Text
+                style={{flexDirection: 'row', alignItems: 'center', gap: 15}}>
+                <Pressable
+                  disabled={todoNote == '' ? true : false}
+                  onPress={() => setOpenDatePicker(true)}
+                  style={{
+                    backgroundColor: colorScheme == 'dark' ? '#222' : '#ECECEC',
+                    paddingVertical: 8,
+                    paddingHorizontal: 18,
+                    borderRadius: 10,
+                  }}>
+                  <View
                     style={{
-                      fontSize: 18,
-                      color: currentTextColor,
-                      fontWeight: '400',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 5,
                     }}>
-                    Set alerts
-                  </Text>
-                </View>
+                    <Icon2
+                      name="alarm-outline"
+                      color={currentTextColor}
+                      size={20}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 18,
+                        color: currentTextColor,
+                        fontWeight: '400',
+                      }}>
+                      {alertProvided ? dateString : 'Set alerts'}
+                    </Text>
+                  </View>
+                </Pressable>
+                {alertProvided && (
+                  <Pressable
+                    onPress={setToDefault}
+                    style={{
+                      height: 28,
+                      width: 28,
+                      borderRadius: 14,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor:
+                        colorScheme == 'dark' ? '#222' : '#ECECEC',
+                    }}>
+                    <Icon name="xmark" size={20} color={currentTextColor} />
+                  </Pressable>
+                )}
               </View>
               <TouchableOpacity
                 disabled={todoNote == '' ? true : false}

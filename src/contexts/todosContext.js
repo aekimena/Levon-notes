@@ -13,6 +13,8 @@ const TodosContextProvider = ({children}) => {
   const [anyTodoItemSelected, setAnyTodoItemSelected] = useState(false);
   const [addBoxShown, setAddBoxShown] = useState(false);
 
+  const [showTodoModal, setShowTodoModal] = useState(false);
+
   function setAllSelectedTodosFalse() {
     setIsTodoItemSelected(false);
     setAnyTodoItemSelected(false);
@@ -31,6 +33,8 @@ const TodosContextProvider = ({children}) => {
         setAllSelectedTodosFalse,
         addBoxShown,
         setAddBoxShown,
+        showTodoModal,
+        setShowTodoModal,
       }}>
       {children}
     </TodosContext.Provider>

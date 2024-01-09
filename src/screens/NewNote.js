@@ -15,20 +15,10 @@ import {useDispatch} from 'react-redux';
 import {addNote} from '../redux/features/notescCollection';
 
 const month = {
-  0: 'January',
-  1: 'February',
-  2: 'March',
-  3: 'April',
-};
-
-const day = {
-  0: 1,
-  1: 2,
-  2: 3,
-  3: 4,
-  4: 5,
-  5: 6,
-  6: 7,
+  1: 'January',
+  2: 'February',
+  3: 'March',
+  4: 'April',
 };
 
 const NewNote = () => {
@@ -77,8 +67,8 @@ const NewNote = () => {
         title: title,
         body: body,
         time: `${date.getHours()}:${date.getMinutes()}, ${
-          month[date.getMonth()]
-        } ${day[date.getDay()]}, ${date.getFullYear()}`,
+          month[date.getMonth() + 1]
+        } ${date.getDate()}, ${date.getFullYear()}`,
       }),
     );
     navigation.goBack();
@@ -105,10 +95,9 @@ const NewNote = () => {
         style={{
           width: '100%',
           height: 'auto',
-          // backgroundColor: 'red',
+
           marginTop: 5,
 
-          // paddingVertical: 20,
           paddingHorizontal: 15,
         }}>
         <TextInput
@@ -125,8 +114,7 @@ const NewNote = () => {
         style={{
           width: '100%',
           paddingHorizontal: 15,
-          // height: 'auto',
-          // backgroundColor: 'green',
+
           flex: 1,
         }}>
         <TextInput

@@ -8,32 +8,35 @@ import EditNote from './src/screens/EditNote';
 import {Provider} from 'react-redux';
 import store from './src/redux/store';
 import TodosContextProvider from './src/contexts/todosContext';
+import NotesContextProvider from './src/contexts/notesContext';
 
 const App = () => {
   const Stack = createNativeStackNavigator();
   return (
     <Provider store={store}>
-      <TodosContextProvider>
-        <NavigationContainer>
-          <Stack.Navigator>
-            <Stack.Screen
-              name="main"
-              component={MainScreen}
-              options={{headerShown: false, presentation: 'card'}}
-            />
-            <Stack.Screen
-              name="newNote"
-              component={NewNote}
-              options={{headerShown: false, presentation: 'card'}}
-            />
-            <Stack.Screen
-              name="editNote"
-              component={EditNote}
-              options={{headerShown: false, presentation: 'card'}}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </TodosContextProvider>
+      <NotesContextProvider>
+        <TodosContextProvider>
+          <NavigationContainer>
+            <Stack.Navigator>
+              <Stack.Screen
+                name="main"
+                component={MainScreen}
+                options={{headerShown: false, presentation: 'card'}}
+              />
+              <Stack.Screen
+                name="newNote"
+                component={NewNote}
+                options={{headerShown: false, presentation: 'card'}}
+              />
+              <Stack.Screen
+                name="editNote"
+                component={EditNote}
+                options={{headerShown: false, presentation: 'card'}}
+              />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </TodosContextProvider>
+      </NotesContextProvider>
     </Provider>
   );
 };

@@ -9,15 +9,6 @@ const month = {
 };
 
 // day index represented with index + 1
-const day = {
-  0: 1,
-  1: 2,
-  2: 3,
-  3: 4,
-  4: 5,
-  5: 6,
-  6: 7,
-};
 
 export const notesCollection = createSlice({
   name: 'notesCollection',
@@ -33,7 +24,7 @@ export const notesCollection = createSlice({
       const date = new Date(Date.now()); // get the updated date
       const newTime = `${date.getHours()}:${date.getMinutes()}, ${
         month[date.getMonth()]
-      } ${day[date.getDay()]}, ${date.getFullYear()}`;
+      } ${date.getDate()}, ${date.getFullYear()}`;
 
       const updatedArray = [...state.notesArray]; // copy of the array
 
@@ -55,19 +46,69 @@ export const notesCollection = createSlice({
       updatedArray.unshift(newObj);
 
       state.notesArray = [...updatedArray];
-      // state.notesArray = [
-      //   state.notesArray[updatedObjIndex],
-      //   ...state.notesArray.slice(0, updatedObjIndex),
-      //   ...state.notesArray.slice(updatedObjIndex + 1),
-      // ];
     },
+    //
     deleteNote: (state, action) => {
-      state.notesArray = state.notesArray.filter(note => {
-        note.id !== action.payload.id;
-      });
+      state.notesArray = state.notesArray.filter(
+        obj => obj.id !== action.payload.id,
+      );
     },
+    selectToDelete: (state, action) => {
+      const updatedArray = [...state.notesArray]; // copy of the array
+
+      // get the index of the note to update
+      const updatedObjIndex = state.notesArray.findIndex(
+        obj => obj.id == action.payload.id,
+      );
+
+      updatedArray[updatedObjIndex] = {
+        ...updatedArray[updatedObjIndex],
+        selected: !updatedArray[updatedObjIndex].selected,
+      };
+
+      state.notesArray = [...updatedArray];
+    },
+    selectAllTrue: (state, action) => {
+      const updatedArray = [...state.notesArray];
+      const updatedObjIndex = state.notesArray.findIndex(
+        obj => obj.id == action.payload.id,
+      );
+
+      updatedArray[updatedObjIndex] = {
+        ...updatedArray[updatedObjIndex],
+        selected: true,
+      };
+
+      state.notesArray = [...updatedArray];
+    },
+    selectAllFalse: (state, action) => {
+      const updatedArray = [...state.notesArray];
+      const updatedObjIndex = state.notesArray.findIndex(
+        obj => obj.id == action.payload.id,
+      );
+
+      updatedArray[updatedObjIndex] = {
+        ...updatedArray[updatedObjIndex],
+        selected: false,
+      };
+
+      state.notesArray = [...updatedArray];
+    },
+    deleteSelectedNote: (state, action) => {
+      const updatedArray = [...state.notesArray];
+      state.notesArray = updatedArray.filter(item => item.selected === false);
+    },
+    //
   },
 });
 
-export const {addNote, deleteNote, editNote} = notesCollection.actions;
+export const {
+  addNote,
+  editNote,
+  deleteNote,
+  selectAllFalse,
+  selectAllTrue,
+  deleteSelectedNote,
+  selectToDelete,
+} = notesCollection.actions;
 export default notesCollection.reducer;

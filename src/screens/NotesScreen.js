@@ -8,13 +8,28 @@ import {
   View,
   useColorScheme,
 } from 'react-native';
-import React from 'react';
+import React, {useContext, useState} from 'react';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon2 from 'react-native-vector-icons/Ionicons';
+import Icon from 'react-native-vector-icons/FontAwesome6';
 import {useNavigation} from '@react-navigation/native';
-import {useSelector} from 'react-redux';
+import {useDispatch, useSelector} from 'react-redux';
+import {NotesContext} from '../contexts/notesContext';
+import {
+  selectAllFalse,
+  selectAllTrue,
+  selectToDelete,
+} from '../redux/features/notescCollection';
+import NoteConfirmationModal from '../Modals/NoteConfirmationModal';
 
 const NotesScreen = () => {
+  const {
+    isNoteItemSelected,
+    setIsNoteItemSelected,
+    anyNoteItemSelected,
+    setAnyNoteItemSelected,
+    setAllSelectedNotesFalse,
+  } = useContext(NotesContext);
   const colorScheme = useColorScheme();
   const themeColor = '#60B1D6';
   const currentTextColor = colorScheme == 'dark' ? '#fff' : '#222';
@@ -22,19 +37,21 @@ const NotesScreen = () => {
   const currentTextinputBg = colorScheme == 'dark' ? '#222' : '#F8F8F8';
   const navigation = useNavigation();
   const notes = useSelector(state => state.notesCollection.notesArray);
+  const dispatch = useDispatch();
 
-  const data = [
-    {
-      id: 1,
-      title: 'Title for expo',
-      body: 'This is the body text fr about 2 times in a row',
-      time: '17, jan, 2000',
-    },
-    {id: 2, title: 'Title', body: 'This is the body text', time: '2:00'},
-    {id: 3, title: 'Title', body: 'This is the body text', time: '2:00'},
-    {id: 4, title: 'Title', body: 'This is the body text', time: '2:00'},
-    {id: 5, title: 'Title', body: 'This is the body text', time: '2:00'},
-  ];
+  const noItemSelected = notes.findIndex(obj => obj.selected == true); // check if no notes are aelected
+  const allItemSelected = notes.filter(todo => todo.selected == true); // get all selected notes
+
+  // handle select all or select none
+  function setAllSelectedTrue() {
+    allItemSelected.length == notes.length
+      ? notes.map(note => {
+          dispatch(selectAllFalse(note));
+        })
+      : notes.map(note => {
+          dispatch(selectAllTrue(note));
+        });
+  }
 
   const RenderNotes = ({item, index}) => {
     let startIndex = 0;
@@ -59,15 +76,21 @@ const NotesScreen = () => {
 
     return (
       <Pressable
-        onPress={() => navigation.navigate('editNote', {item})}
-        style={{
-          backgroundColor: checkIndex(),
-          borderRadius: 10,
-          width: '100%',
-          height: 'auto',
-          padding: 15,
-        }}>
-        <View style={{justifyContent: 'space-evenly', gap: 4}}>
+        onPress={() => {
+          anyNoteItemSelected ? null : navigation.navigate('editNote', {item});
+        }}
+        onLongPress={() => {
+          setIsNoteItemSelected(true);
+          setAnyNoteItemSelected(true);
+          dispatch(selectToDelete(item));
+        }}
+        style={[
+          innerStyle.noteBox,
+          {
+            backgroundColor: checkIndex(),
+          },
+        ]}>
+        <View style={{justifyContent: 'space-evenly', gap: 4, flex: 1}}>
           <Text numberOfLines={1} style={innerStyle.noteBoxTitle}>
             {item.title}
           </Text>
@@ -78,6 +101,15 @@ const NotesScreen = () => {
             {item.time}
           </Text>
         </View>
+        {anyNoteItemSelected && (
+          <Pressable onPress={() => dispatch(selectToDelete(item))}>
+            <Icon
+              name={item.selected ? 'square-check' : 'square'}
+              size={25}
+              color={themeColor}
+            />
+          </Pressable>
+        )}
       </Pressable>
     );
   };
@@ -114,6 +146,16 @@ const NotesScreen = () => {
       fontWeight: '400',
       color: '#333',
     },
+    noteBox: {
+      borderRadius: 10,
+      width: '100%',
+      height: 'auto',
+      gap: 5,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 15,
+    },
   });
   return (
     <SafeAreaView
@@ -122,15 +164,58 @@ const NotesScreen = () => {
         barStyle={colorScheme == 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={currentBgColor}
       />
+      <NoteConfirmationModal />
 
       <View style={{gap: 20, paddingVertical: 10}}>
-        <Text style={innerStyle.headerText}>Notes</Text>
-        <View style={innerStyle.textinputContainer}>
-          <TextInput style={innerStyle.textinput} placeholder="Search notes" />
-          <View style={{position: 'absolute', left: 5}}>
-            <Icon2 name="search-outline" color="#ccc" size={30} />
+        {anyNoteItemSelected ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+            <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+              <Pressable onPress={setAllSelectedNotesFalse}>
+                <Icon name="xmark" size={25} color={themeColor} />
+              </Pressable>
+
+              <Text
+                style={{
+                  fontSize: 20,
+                  fontWeight: '500',
+                  color: currentTextColor,
+                }}>
+                {noItemSelected == -1
+                  ? 'Please select items'
+                  : `${allItemSelected.length} Item selected`}
+              </Text>
+            </View>
+            <Pressable onPress={setAllSelectedTrue}>
+              <Icon
+                name={
+                  allItemSelected.length == notes.length
+                    ? 'square-check'
+                    : 'square'
+                }
+                size={25}
+                color={themeColor}
+              />
+            </Pressable>
           </View>
-        </View>
+        ) : (
+          <>
+            <Text style={innerStyle.headerText}>Notes</Text>
+            <View style={innerStyle.textinputContainer}>
+              <TextInput
+                style={innerStyle.textinput}
+                placeholder="Search notes"
+              />
+              <View style={{position: 'absolute', left: 5}}>
+                <Icon2 name="search-outline" color="#ccc" size={30} />
+              </View>
+            </View>
+          </>
+        )}
       </View>
       <FlatList
         contentContainerStyle={{paddingVertical: 5, gap: 15}}

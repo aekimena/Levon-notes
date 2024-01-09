@@ -17,7 +17,9 @@ import {useNavigation} from '@react-navigation/native';
 
 import {useDispatch} from 'react-redux';
 import {deleteSelected} from '../redux/features/todosCollection';
+import {deleteSelectedNote} from '../redux/features/notescCollection';
 import {TodosContext} from '../contexts/todosContext';
+import {NotesContext} from '../contexts/notesContext';
 
 const themeColor = '#60B1D6';
 // these are the tab icons
@@ -31,11 +33,18 @@ const BottomTabs = ({state, descriptors, navigation}) => {
     setIsTodoItemSelected,
     // isNoteItemSelected,
     setAllSelectedTodosFalse,
+    setShowTodoModal,
     // setIsNoteItemSelected,
     addBoxShown,
     setAddBoxShown,
   } = useContext(TodosContext);
-  const isNoteItemSelected = false;
+
+  const {
+    isNoteItemSelected,
+    setAllSelectedNotesFalse,
+    showNoteModal,
+    setShowNoteModal,
+  } = useContext(NotesContext);
   const window = useWindowDimensions();
   const [currentRoute, setCurrentRoute] = useState('notes'); // check the current route
   const [keyboardStatus, setKeyboardStatus] = useState(false);
@@ -67,8 +76,13 @@ const BottomTabs = ({state, descriptors, navigation}) => {
   function handlePress() {
     if (isNoteItemSelected || isTodoItemSelected) {
       if (isTodoItemSelected && currentRoute !== 'notes') {
-        dispatch(deleteSelected());
-        setAllSelectedTodosFalse();
+        // dispatch(deleteSelected());
+        // setAllSelectedTodosFalse();
+        setShowTodoModal(true);
+      } else if (isNoteItemSelected && currentRoute === 'notes') {
+        // dispatch(deleteSelectedNote());
+        // setAllSelectedNotesFalse();
+        setShowNoteModal(true);
       }
     } else {
       newNoteOrTodo();
@@ -79,8 +93,8 @@ const BottomTabs = ({state, descriptors, navigation}) => {
   function handleIconDisplay() {
     if (
       // (currentRoute == 'notes' && isNoteItemSelected) ||
-      currentRoute !== 'notes' &&
-      isTodoItemSelected
+      (currentRoute !== 'notes' && isTodoItemSelected) ||
+      (currentRoute == 'notes' && isNoteItemSelected)
     ) {
       return 'trash-bin-outline';
     } else {
