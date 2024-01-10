@@ -66,7 +66,11 @@ const NewNote = () => {
         id: `id_${Date.now()}`,
         title: title,
         body: body,
-        time: `${date.getHours()}:${date.getMinutes()}, ${
+        time: `${
+          date.getHours() < 10 ? '0' + date.getHours() : date.getHours()
+        }:${
+          date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()
+        }, ${
           month[date.getMonth() + 1]
         } ${date.getDate()}, ${date.getFullYear()}`,
       }),

@@ -15,6 +15,7 @@ import Icon from 'react-native-vector-icons/FontAwesome6';
 import {useDispatch, useSelector} from 'react-redux';
 import AddTodoModal from '../Modals/AddTodoModal';
 import DatePicker from 'react-native-date-picker';
+
 import {
   addTodo,
   completeTodo,
@@ -28,11 +29,11 @@ import TodoConfirmationModal from '../Modals/TodoConfirmationModal';
 
 // representation of the month index
 const monthRep = {
-  1: 'January',
-  2: 'February',
-  3: 'March',
-  4: 'April',
-  5: 'May',
+  0: 'January',
+  1: 'February',
+  2: 'March',
+  3: 'April',
+  4: 'May',
 };
 
 const TodosScreen = () => {
@@ -72,12 +73,18 @@ const TodosScreen = () => {
   const [selectedMinute, setSelectedMinute] = useState(null);
   const [selectedHour, setSelectedHour] = useState(null);
 
-  const dateString = `${monthRep[selectedMonth]} ${selectedDate}, ${selectedYear} ${selectedHour}:${selectedMinute}`;
+  const dateString = `${
+    monthRep[selectedMonth]
+  } ${selectedDate}, ${selectedYear} ${
+    selectedHour < 10 ? '0' + selectedHour : selectedHour
+  }:${selectedMinute < 10 ? '0' + selectedMinute : selectedMinute}`;
+
+  const [newTodoId, setNewTodoId] = useState(todos.length);
 
   // get date from the selected date
   function extractDate(date) {
     setSelectedYear(date.getFullYear());
-    setSelectedMonth(date.getMonth() + 1);
+    setSelectedMonth(date.getMonth());
     setSelectedDate(date.getDate());
     setSelectedHour(date.getHours());
     setSelectedMinute(date.getMinutes());
@@ -95,6 +102,7 @@ const TodosScreen = () => {
 
   // function when a todo item is clicked
   function showFocusItem(item) {
+    console.log(item.id);
     setFocusItem(item);
     setAlertProvided(item.alertProvided);
     setSelectedYear(item.alertTime.year);
@@ -177,6 +185,7 @@ const TodosScreen = () => {
             },
           }),
         );
+
         setTodoNote('');
         setAlertProvided(false);
         setAddBoxShown(false);
@@ -206,6 +215,33 @@ const TodosScreen = () => {
       }
     }
 
+    // function to stike the alert time if the todo is completed
+    function checkDateCompletion() {
+      if (item.completed) {
+        return 'line-through';
+      } else {
+        return 'none';
+      }
+    }
+
+    // function to change the alert time color if the time has passed
+    function checkDateMissed() {
+      const date = new Date(Date.now());
+      const currentDate = new Date(Date.now());
+      // set the alert date with the provided alert date
+      date.setFullYear(item.alertTime.year);
+      date.setDate(item.alertTime.day);
+      date.setHours(item.alertTime.hour);
+      date.setMinutes(item.alertTime.minute);
+      date.setMonth(item.alertTime.month);
+
+      if (item.completed && currentDate.getTime() > date.getTime()) {
+        return currentTextColor;
+      } else if (currentDate.getTime() > date.getTime()) {
+        return 'red';
+      }
+    }
+
     return (
       <Pressable
         onPress={() => {
@@ -220,48 +256,70 @@ const TodosScreen = () => {
           setAnyTodoItemSelected(true);
           dispatch(selectToDelete(item));
         }}
-        style={[
-          innerStyle.todoBox,
-          {
-            backgroundColor: checkIndex(), // a background color is returned
-          },
-        ]}>
-        <View
-          style={{
-            justifyContent: 'flex-start',
-            gap: 10,
-            flexDirection: 'row',
-            alignItems: 'center',
-            flex: 1,
-          }}>
-          {!anyTodoItemSelected && (
-            <Pressable onPress={() => dispatch(completeTodo({id: item.id}))}>
+        style={{
+          borderRadius: 10,
+          gap: 5,
+          width: '100%',
+          height: 'auto',
+          padding: 15,
+          paddingVertical: 20,
+          backgroundColor: checkIndex(), // a background color is returned
+        }}>
+        <View style={[innerStyle.todoBox, {}]}>
+          <View
+            style={{
+              justifyContent: 'flex-start',
+              gap: 10,
+              flexDirection: 'row',
+              alignItems: 'center',
+              flex: 1,
+            }}>
+            {!anyTodoItemSelected && (
+              <Pressable onPress={() => dispatch(completeTodo({id: item.id}))}>
+                <Icon
+                  name={item.completed ? 'circle-check' : 'circle'}
+                  solid={item.completed ? true : false}
+                  color={themeColor}
+                  size={20}
+                />
+              </Pressable>
+            )}
+
+            <Text
+              numberOfLines={1}
+              style={[
+                innerStyle.todoBoxBody,
+                {textDecorationLine: item.completed ? 'line-through' : 'none'},
+              ]}>
+              {item.body}
+            </Text>
+          </View>
+          {anyTodoItemSelected && (
+            <Pressable onPress={() => dispatch(selectToDelete(item))}>
               <Icon
-                name={item.completed ? 'circle-check' : 'circle'}
-                solid={item.completed ? true : false}
+                name={item.selected ? 'square-check' : 'square'}
+                size={25}
                 color={themeColor}
-                size={20}
               />
             </Pressable>
           )}
-
-          <Text
-            numberOfLines={1}
-            style={[
-              innerStyle.todoBoxBody,
-              {textDecorationLine: item.completed ? 'line-through' : 'none'},
-            ]}>
-            {item.body}
-          </Text>
         </View>
-        {anyTodoItemSelected && (
-          <Pressable onPress={() => dispatch(selectToDelete(item))}>
-            <Icon
-              name={item.selected ? 'square-check' : 'square'}
-              size={25}
-              color={themeColor}
-            />
-          </Pressable>
+        {item.alertProvided && (
+          <View style={{flexDirection: 'row', alignItems: 'center', gap: 3}}>
+            <Icon2 name="alarm-outline" color={currentTextColor} size={15} />
+            <Text
+              style={{
+                fontSize: 15,
+                // color: currentTextColor,
+                textDecorationLine: checkDateCompletion(),
+                color: checkDateMissed(),
+                fontWeight: '500',
+              }}>
+              {`${monthRep[item.alertTime.month]} ${item.alertTime.day}, ${
+                item.alertTime.year
+              } ${item.alertTime.hour}:${item.alertTime.minute}`}
+            </Text>
+          </View>
         )}
       </Pressable>
     );
@@ -304,15 +362,10 @@ const TodosScreen = () => {
       borderRadius: 10,
     },
     todoBox: {
-      borderRadius: 10,
       gap: 5,
-      width: '100%',
-      height: 'auto',
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: 15,
-      paddingVertical: 20,
     },
   });
 
@@ -336,6 +389,7 @@ const TodosScreen = () => {
           extractDate(date);
           setAlertProvided(true);
           setOpenDatePicker(false);
+          setDate(new Date());
         }}
         onCancel={() => {
           setOpenDatePicker(false);
