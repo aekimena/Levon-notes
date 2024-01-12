@@ -29,8 +29,45 @@ const AddTodoModal = ({
   const colorScheme = useColorScheme();
   const themeColor = '#60B1D6';
   const currentTextColor = colorScheme == 'dark' ? '#fff' : '#222';
-
   const {addBoxShown, setAddBoxShown} = useContext(TodosContext);
+
+  const innerStyle = StyleSheet.create({
+    modalContainer: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      width: useWindowDimensions().width,
+      alignSelf: 'center',
+    },
+    infoBox: {
+      backgroundColor: colorScheme == 'dark' ? '#222' : '#fff',
+      height: 'auto',
+      borderRadius: 15,
+      paddingVertical: 30,
+      paddingHorizontal: 15,
+      gap: 10,
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 0,
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+      width: '100%',
+    },
+    textInput: {
+      height: 'auto',
+      width: '100%',
+      color: currentTextColor,
+      fontSize: 20,
+      fontWeight: '400',
+      padding: 10,
+    },
+    cancelIcon: {
+      height: 28,
+      width: 28,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colorScheme == 'dark' ? '#222' : '#ECECEC',
+    },
+  });
 
   return (
     <View>
@@ -58,27 +95,8 @@ const AddTodoModal = ({
         animationOutTiming={100}
         avoidKeyboard={true}
         isVisible={addBoxShown}>
-        <View
-          style={{
-            flex: 1,
-            justifyContent: 'flex-end',
-            width: useWindowDimensions().width,
-            alignSelf: 'center',
-          }}>
-          <View
-            style={{
-              backgroundColor: colorScheme == 'dark' ? '#222' : '#fff',
-              height: 'auto',
-              borderRadius: 15,
-              paddingVertical: 30,
-              paddingHorizontal: 15,
-              gap: 10,
-              borderBottomLeftRadius: 0,
-              borderBottomRightRadius: 0,
-              justifyContent: 'center',
-              alignItems: 'flex-start',
-              width: '100%',
-            }}>
+        <View style={innerStyle.modalContainer}>
+          <View style={innerStyle.infoBox}>
             <View
               style={{
                 width: '100%',
@@ -87,14 +105,7 @@ const AddTodoModal = ({
                 borderRadius: 10,
               }}>
               <TextInput
-                style={{
-                  height: 'auto',
-                  width: '100%',
-                  color: currentTextColor,
-                  fontSize: 20,
-                  fontWeight: '400',
-                  padding: 10,
-                }}
+                style={innerStyle.textInput}
                 defaultValue={todoNote}
                 onChangeText={newText => setTodoNote(newText)}
                 autoFocus
@@ -144,15 +155,7 @@ const AddTodoModal = ({
                 {alertProvided && (
                   <Pressable
                     onPress={setToDefault}
-                    style={{
-                      height: 28,
-                      width: 28,
-                      borderRadius: 14,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor:
-                        colorScheme == 'dark' ? '#222' : '#ECECEC',
-                    }}>
+                    style={innerStyle.cancelIcon}>
                     <Icon name="xmark" size={20} color={currentTextColor} />
                   </Pressable>
                 )}
@@ -169,7 +172,6 @@ const AddTodoModal = ({
                   SAVE
                 </Text>
               </TouchableOpacity>
-              {/*  */}
             </View>
           </View>
         </View>

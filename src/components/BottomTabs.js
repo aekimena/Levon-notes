@@ -14,10 +14,6 @@ import Icon from 'react-native-vector-icons/FontAwesome6';
 import Icon2 from 'react-native-vector-icons/Ionicons';
 import {Shadow} from 'react-native-shadow-2';
 import {useNavigation} from '@react-navigation/native';
-
-import {useDispatch} from 'react-redux';
-import {deleteSelected} from '../redux/features/todosCollection';
-import {deleteSelectedNote} from '../redux/features/notescCollection';
 import {TodosContext} from '../contexts/todosContext';
 import {NotesContext} from '../contexts/notesContext';
 
@@ -28,28 +24,14 @@ const tabIcons = {
   todos: 'circle-check',
 };
 const BottomTabs = ({state, descriptors, navigation}) => {
-  const {
-    isTodoItemSelected,
-    setIsTodoItemSelected,
-    // isNoteItemSelected,
-    setAllSelectedTodosFalse,
-    setShowTodoModal,
-    // setIsNoteItemSelected,
-    addBoxShown,
-    setAddBoxShown,
-  } = useContext(TodosContext);
+  const {setAddBoxShown, setShowTodoModal, anyTodoItemSelected} =
+    useContext(TodosContext);
 
-  const {
-    isNoteItemSelected,
-    setAllSelectedNotesFalse,
-    showNoteModal,
-    setShowNoteModal,
-  } = useContext(NotesContext);
+  const {setShowNoteModal, anyNoteItemSelected} = useContext(NotesContext);
   const window = useWindowDimensions();
   const [currentRoute, setCurrentRoute] = useState('notes'); // check the current route
   const [keyboardStatus, setKeyboardStatus] = useState(false);
   const navigation2 = useNavigation();
-  const dispatch = useDispatch();
 
   // useffect to hide bottom tab when the keyboard is active
 
@@ -67,21 +49,19 @@ const BottomTabs = ({state, descriptors, navigation}) => {
     };
   }, []);
 
+  // function to either add new todo or note, depending on the current route
   function newNoteOrTodo() {
     currentRoute == 'notes'
       ? navigation2.navigate('newNote')
       : setAddBoxShown(true);
   }
 
+  // function to either add new todo/note or delete todo/note
   function handlePress() {
-    if (isNoteItemSelected || isTodoItemSelected) {
-      if (isTodoItemSelected && currentRoute !== 'notes') {
-        // dispatch(deleteSelected());
-        // setAllSelectedTodosFalse();
+    if (anyNoteItemSelected || anyTodoItemSelected) {
+      if (anyTodoItemSelected && currentRoute !== 'notes') {
         setShowTodoModal(true);
-      } else if (isNoteItemSelected && currentRoute === 'notes') {
-        // dispatch(deleteSelectedNote());
-        // setAllSelectedNotesFalse();
+      } else if (anyNoteItemSelected && currentRoute === 'notes') {
         setShowNoteModal(true);
       }
     } else {
@@ -92,9 +72,8 @@ const BottomTabs = ({state, descriptors, navigation}) => {
   // return an particular icon if notes or todo screen has an active selected state
   function handleIconDisplay() {
     if (
-      // (currentRoute == 'notes' && isNoteItemSelected) ||
-      (currentRoute !== 'notes' && isTodoItemSelected) ||
-      (currentRoute == 'notes' && isNoteItemSelected)
+      (currentRoute !== 'notes' && anyTodoItemSelected) ||
+      (currentRoute == 'notes' && anyNoteItemSelected)
     ) {
       return 'trash-bin-outline';
     } else {

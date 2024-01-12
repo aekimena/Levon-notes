@@ -11,8 +11,9 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import Icon2 from 'react-native-vector-icons/Ionicons';
 import {useNavigation} from '@react-navigation/native';
-import {useDispatch} from 'react-redux';
-import {addNote} from '../redux/features/notescCollection';
+import {BSON} from 'realm';
+import {useRealm, useQuery} from '@realm/react';
+import {Notes} from '../realm/notesModel';
 
 const month = {
   1: 'January',
@@ -22,6 +23,9 @@ const month = {
 };
 
 const NewNote = () => {
+  // realm stuff
+  const realm = useRealm();
+  //
   const colorScheme = useColorScheme();
   const themeColor = '#60B1D6';
   const currentTextColor = colorScheme == 'dark' ? '#fff' : '#222';
@@ -29,7 +33,6 @@ const NewNote = () => {
   const navigation = useNavigation();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const dispatch = useDispatch();
   const date = new Date(Date.now());
 
   const innerStyle = StyleSheet.create({
@@ -61,9 +64,9 @@ const NewNote = () => {
   }
 
   function saveNewNote() {
-    dispatch(
-      addNote({
-        id: `id_${Date.now()}`,
+    realm.write(() => {
+      realm.create(Notes, {
+        _id: new BSON.ObjectID(),
         title: title,
         body: body,
         time: `${
@@ -73,8 +76,9 @@ const NewNote = () => {
         }, ${
           month[date.getMonth() + 1]
         } ${date.getDate()}, ${date.getFullYear()}`,
-      }),
-    );
+        createdAt: new Date(),
+      });
+    });
     navigation.goBack();
   }
   return (

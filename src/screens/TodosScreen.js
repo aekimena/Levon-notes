@@ -8,24 +8,21 @@ import {
   View,
   useColorScheme,
 } from 'react-native';
-import React, {useContext, useEffect, useState} from 'react';
+import React, {useCallback, useContext, useEffect, useState} from 'react';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon2 from 'react-native-vector-icons/Ionicons';
 import Icon from 'react-native-vector-icons/FontAwesome6';
-import {useDispatch, useSelector} from 'react-redux';
 import AddTodoModal from '../Modals/AddTodoModal';
 import DatePicker from 'react-native-date-picker';
+import notifee, {EventType} from '@notifee/react-native';
+import {BSON} from 'realm';
+import {useRealm, useQuery} from '@realm/react';
+import {Todos} from '../realm/todosModel';
 
-import {
-  addTodo,
-  completeTodo,
-  editTodo,
-  selectAllFalse,
-  selectAllTrue,
-  selectToDelete,
-} from '../redux/features/todosCollection';
 import {TodosContext} from '../contexts/todosContext';
 import TodoConfirmationModal from '../Modals/TodoConfirmationModal';
+import {setAlertNotification} from '../components/notificationHandler';
+import {useNavigation} from '@react-navigation/native';
 
 // representation of the month index
 const monthRep = {
@@ -38,17 +35,22 @@ const monthRep = {
 
 const TodosScreen = () => {
   const {
-    isTodoItemSelected,
+    // isTodoItemSelected,
     setIsTodoItemSelected,
     anyTodoItemSelected,
     setAnyTodoItemSelected,
     setAllSelectedTodosFalse,
-    addBoxShown,
+    // addBoxShown,
     setAddBoxShown,
   } = useContext(TodosContext);
   const colorScheme = useColorScheme();
-  const todos = useSelector(state => state.todosCollection.todosArray);
-  const dispatch = useDispatch();
+  const navigation = useNavigation();
+  // realm stuff
+  const realm = useRealm();
+
+  const TodosArray = useQuery(Todos);
+  //
+
   const themeColor = '#60B1D6';
   const currentTextColor = colorScheme == 'dark' ? '#fff' : '#222';
   const currentBgColor = colorScheme == 'dark' ? '#111' : '#fff';
@@ -59,19 +61,18 @@ const TodosScreen = () => {
   const [editMode, setEditMode] = useState(false); // set to true if a todo is pressed
   const [focusItem, setFocusItem] = useState(null); // set to pressed todo
 
-  // these states are for setting alert if provided
   const [alertProvided, setAlertProvided] = useState(false);
 
-  const noItemSelected = todos.findIndex(obj => obj.selected == true); // check if no todos are aelected
-  const allItemSelected = todos.filter(todo => todo.selected == true); // get all selected todos
+  const noItemSelected = TodosArray.findIndex(obj => obj.isSelected == true); // check if no todos are aelected
+  const allItemSelected = TodosArray.filter(obj => obj.isSelected == true); // get all selected todos
 
   const [date, setDate] = useState(new Date());
   const [openDatePicker, setOpenDatePicker] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(null);
-  const [selectedMonth, setSelectedMonth] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedMinute, setSelectedMinute] = useState(null);
-  const [selectedHour, setSelectedHour] = useState(null);
+  const [selectedYear, setSelectedYear] = useState(0);
+  const [selectedMonth, setSelectedMonth] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(0);
+  const [selectedMinute, setSelectedMinute] = useState(0);
+  const [selectedHour, setSelectedHour] = useState(0);
 
   const dateString = `${
     monthRep[selectedMonth]
@@ -79,7 +80,24 @@ const TodosScreen = () => {
     selectedHour < 10 ? '0' + selectedHour : selectedHour
   }:${selectedMinute < 10 ? '0' + selectedMinute : selectedMinute}`;
 
-  const [newTodoId, setNewTodoId] = useState(todos.length);
+  useEffect(() => {
+    return notifee.onForegroundEvent(async ({type, detail}) => {
+      const item = TodosArray.find(obj => obj._id == detail.notification.id);
+      if (item) {
+        if (
+          type === EventType.ACTION_PRESS &&
+          detail.pressAction.id === 'mark-as-completed'
+        ) {
+          realm.write(() => {
+            item.isCompleted = true;
+          });
+          await notifee.cancelNotification(detail.notification.id);
+        }
+      } else {
+        await notifee.cancelNotification(detail.notification.id);
+      }
+    });
+  }, []);
 
   // get date from the selected date
   function extractDate(date) {
@@ -93,18 +111,17 @@ const TodosScreen = () => {
   // set all date state back to default
   function setToDefault() {
     setAlertProvided(false);
-    setSelectedYear(null);
-    setSelectedMonth(null);
-    setSelectedDate(null);
-    setSelectedHour(null);
-    setSelectedMinute(null);
+    setSelectedYear(0);
+    setSelectedMonth(0);
+    setSelectedDate(0);
+    setSelectedHour(0);
+    setSelectedMinute(0);
   }
 
   // function when a todo item is clicked
   function showFocusItem(item) {
-    console.log(item.id);
     setFocusItem(item);
-    setAlertProvided(item.alertProvided);
+    setAlertProvided(item.isAlertProvided);
     setSelectedYear(item.alertTime.year);
     setSelectedMonth(item.alertTime.month);
     setSelectedDate(item.alertTime.day);
@@ -118,114 +135,90 @@ const TodosScreen = () => {
 
   // handle select all or select none
   function setAllSelectedTrue() {
-    allItemSelected.length == todos.length
-      ? todos.map(todo => {
-          dispatch(selectAllFalse(todo));
+    allItemSelected.length == TodosArray.length
+      ? TodosArray.map(todo => {
+          realm.write(() => {
+            todo.isSelected = false;
+          });
         })
-      : todos.map(todo => {
-          dispatch(selectAllTrue(todo));
+      : TodosArray.map(todo => {
+          realm.write(() => {
+            todo.isSelected = true;
+          });
         });
   }
 
   // function to save or edit todo
-  function saveNewTodo() {
+  async function saveNewTodo() {
     // check if edit mode is true or false
     switch (editMode) {
       case true:
-        const index = todos.findIndex(obj => obj.id === focusItem.id);
+        const item = TodosArray.find(
+          obj => obj._id.toHexString() == focusItem._id,
+        );
         // if the todo item is still the same
         if (
-          todoNote === todos[index].body &&
-          todos[index].alertTime.year == selectedYear &&
-          todos[index].alertTime.month == selectedMonth &&
-          todos[index].alertTime.day == selectedDate &&
-          todos[index].alertTime.hour == selectedHour &&
-          todos[index].alertTime.minute == selectedMinute &&
-          todos[index].alertProvided == alertProvided
+          todoNote == item.body &&
+          item.alertTime.year == selectedYear &&
+          item.alertTime.month == selectedMonth &&
+          item.alertTime.day == selectedDate &&
+          item.alertTime.hour == selectedHour &&
+          item.alertTime.minute == selectedMinute &&
+          item.isAlertProvided == alertProvided
         ) {
           setAddBoxShown(false);
           setEditMode(false);
           setTodoNote('');
         } else {
-          // update the todo item
-          dispatch(
-            editTodo({
-              ...focusItem,
-              body: todoNote,
-              alertProvided: alertProvided,
-              alertTime: {
-                month: selectedMonth,
-                year: selectedYear,
-                hour: selectedHour,
-                minute: selectedMinute,
-                day: selectedDate,
-              },
-            }),
-          );
+          // update todo
+          realm.write(() => {
+            item.body = todoNote;
+            item.isAlertProvided = alertProvided;
+            item.alertTime = {
+              month: selectedMonth,
+              year: selectedYear,
+              hour: selectedHour,
+              minute: selectedMinute,
+              day: selectedDate,
+            };
+          });
           setAddBoxShown(false);
           setEditMode(false);
           setToDefault();
           setTodoNote('');
+          setAlertNotification(item);
         }
         break;
       case false:
         // create new todo
-        dispatch(
-          addTodo({
-            id: `id_${Date.now()}`,
+        realm.write(() => {
+          realm.create(Todos, {
+            _id: new BSON.ObjectId(),
             body: todoNote,
-            completed: false,
-            alertProvided: alertProvided,
+            isCompleted: false,
+            isAlertProvided: alertProvided,
             alertTime: {
               month: selectedMonth,
-              day: selectedDate,
-              minute: selectedMinute,
-              hour: selectedHour,
               year: selectedYear,
+              day: selectedDate,
+              hour: selectedHour,
+              minute: selectedMinute,
             },
-          }),
-        );
-
+            isSelected: false,
+            createdAt: new Date(),
+          });
+        });
         setTodoNote('');
-        setAlertProvided(false);
         setAddBoxShown(false);
+        setToDefault();
+        setAlertNotification(TodosArray.slice(TodosArray.length - 1)[0]);
         break;
     }
   }
 
   const RenderTodos = ({item, index}) => {
-    let startIndex = 0;
-    // function to assign background colors to every first five todos when looped
-    function checkIndex() {
-      while (startIndex < todos.length + 5) {
-        const newArray = todos.slice(startIndex, startIndex + 5);
-        switch (newArray.indexOf(item)) {
-          case 0:
-            return '#FFE2D9';
-          case 1:
-            return '#D9E0FF';
-          case 2:
-            return '#EEEEEE';
-          case 3:
-            return '#C4FFE4';
-          case 4:
-            return '#EBFFC4';
-        }
-        startIndex += 5;
-      }
-    }
-
-    // function to stike the alert time if the todo is completed
-    function checkDateCompletion() {
-      if (item.completed) {
-        return 'line-through';
-      } else {
-        return 'none';
-      }
-    }
-
     // function to change the alert time color if the time has passed
-    function checkDateMissed() {
+    const checkDateMissed = () => {
       const date = new Date(Date.now());
       const currentDate = new Date(Date.now());
       // set the alert date with the provided alert date
@@ -235,91 +228,113 @@ const TodosScreen = () => {
       date.setMinutes(item.alertTime.minute);
       date.setMonth(item.alertTime.month);
 
-      if (item.completed && currentDate.getTime() > date.getTime()) {
+      if (item.isCompleted && currentDate.getTime() > date.getTime()) {
         return currentTextColor;
       } else if (currentDate.getTime() > date.getTime()) {
         return 'red';
       }
-    }
+    };
 
     return (
       <Pressable
         onPress={() => {
           if (anyTodoItemSelected) {
-            null;
+            realm.write(() => {
+              item.isSelected = !item.isSelected;
+            });
           } else {
             showFocusItem(item);
           }
         }}
         onLongPress={() => {
-          setIsTodoItemSelected(true);
+          // setIsTodoItemSelected(true);
           setAnyTodoItemSelected(true);
-          dispatch(selectToDelete(item));
-        }}
-        style={{
-          borderRadius: 10,
-          gap: 5,
-          width: '100%',
-          height: 'auto',
-          padding: 15,
-          paddingVertical: 20,
-          backgroundColor: checkIndex(), // a background color is returned
-        }}>
-        <View style={[innerStyle.todoBox, {}]}>
-          <View
-            style={{
-              justifyContent: 'flex-start',
-              gap: 10,
-              flexDirection: 'row',
-              alignItems: 'center',
-              flex: 1,
-            }}>
-            {!anyTodoItemSelected && (
-              <Pressable onPress={() => dispatch(completeTodo({id: item.id}))}>
-                <Icon
-                  name={item.completed ? 'circle-check' : 'circle'}
-                  solid={item.completed ? true : false}
-                  color={themeColor}
-                  size={20}
-                />
-              </Pressable>
-            )}
 
+          realm.write(() => {
+            item.isSelected = !item.isSelected;
+          });
+        }}
+        style={innerStyle.todoBox}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            flex: 1,
+          }}>
+          {!anyTodoItemSelected && (
+            <Pressable
+              onPress={() => {
+                realm.write(() => {
+                  item.isCompleted = !item.isCompleted;
+                });
+                setAlertNotification(item);
+              }}>
+              <Icon
+                name={item.isCompleted ? 'circle-check' : 'circle'}
+                solid={item.isCompleted ? true : false}
+                color={themeColor}
+                size={20}
+              />
+            </Pressable>
+          )}
+          <View style={{gap: 10, flex: 1}}>
             <Text
               numberOfLines={1}
               style={[
                 innerStyle.todoBoxBody,
-                {textDecorationLine: item.completed ? 'line-through' : 'none'},
+                {
+                  textDecorationLine: item.isCompleted
+                    ? 'line-through'
+                    : 'none',
+                },
               ]}>
               {item.body}
             </Text>
+            {item.isAlertProvided && (
+              <View
+                style={{flexDirection: 'row', alignItems: 'center', gap: 3}}>
+                <Icon2
+                  name="alarm-outline"
+                  color={currentTextColor}
+                  size={15}
+                />
+                <Text
+                  style={{
+                    fontSize: 15,
+                    color: checkDateMissed(),
+                    fontWeight: '500',
+                  }}>
+                  {`${monthRep[item.alertTime.month]} ${item.alertTime.day}, ${
+                    item.alertTime.year
+                  } ${
+                    item.alertTime.hour < 10
+                      ? '0' + item.alertTime.hour
+                      : item.alertTime.hour
+                  }:${
+                    item.alertTime.minute < 10
+                      ? '0' + item.alertTime.minute
+                      : item.alertTime.minute
+                  }`}
+                </Text>
+              </View>
+            )}
           </View>
-          {anyTodoItemSelected && (
-            <Pressable onPress={() => dispatch(selectToDelete(item))}>
-              <Icon
-                name={item.selected ? 'square-check' : 'square'}
-                size={25}
-                color={themeColor}
-              />
-            </Pressable>
-          )}
         </View>
-        {item.alertProvided && (
-          <View style={{flexDirection: 'row', alignItems: 'center', gap: 3}}>
-            <Icon2 name="alarm-outline" color={currentTextColor} size={15} />
-            <Text
-              style={{
-                fontSize: 15,
-                // color: currentTextColor,
-                textDecorationLine: checkDateCompletion(),
-                color: checkDateMissed(),
-                fontWeight: '500',
-              }}>
-              {`${monthRep[item.alertTime.month]} ${item.alertTime.day}, ${
-                item.alertTime.year
-              } ${item.alertTime.hour}:${item.alertTime.minute}`}
-            </Text>
-          </View>
+
+        {anyTodoItemSelected && (
+          <Pressable
+            onPress={() => {
+              realm.write(() => {
+                item.isSelected = !item.isSelected;
+              });
+            }}>
+            <Icon
+              name={item.isSelected ? 'square-check' : 'square'}
+              size={25}
+              color={themeColor}
+            />
+          </Pressable>
         )}
       </Pressable>
     );
@@ -344,7 +359,7 @@ const TodosScreen = () => {
     },
 
     todoBoxBody: {
-      fontSize: 20,
+      fontSize: 22,
       fontWeight: '500',
       color: '#333',
       flex: 1,
@@ -362,10 +377,16 @@ const TodosScreen = () => {
       borderRadius: 10,
     },
     todoBox: {
+      borderRadius: 10,
       gap: 5,
+      width: '100%',
+      height: 'auto',
+      padding: 15,
+      paddingVertical: 20,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      backgroundColor: currentTextinputBg,
     },
   });
 
@@ -423,7 +444,7 @@ const TodosScreen = () => {
             <Pressable onPress={setAllSelectedTrue}>
               <Icon
                 name={
-                  allItemSelected.length == todos.length
+                  allItemSelected.length == TodosArray.length
                     ? 'square-check'
                     : 'square'
                 }
@@ -435,15 +456,26 @@ const TodosScreen = () => {
         ) : (
           <>
             <Text style={innerStyle.headerText}>To-dos</Text>
-            <View style={innerStyle.textinputContainer}>
-              <TextInput
-                style={innerStyle.textinput}
-                placeholder="Search to-dos"
-              />
+            <Pressable
+              style={innerStyle.textinputContainer}
+              onPress={() => navigation.navigate('searchTodos')}>
+              <Text
+                style={{
+                  alignSelf: 'flex-start',
+                  fontSize: 20,
+                  color: colorScheme == 'dark' ? '#fff' : '#888',
+                  paddingHorizontal: 5,
+                }}>
+                Search to-dos
+              </Text>
               <View style={{position: 'absolute', left: 5}}>
-                <Icon2 name="search-outline" color="#ccc" size={30} />
+                <Icon2
+                  name="search-outline"
+                  color={colorScheme == 'dark' ? '#fff' : '#888'}
+                  size={30}
+                />
               </View>
-            </View>
+            </Pressable>
           </>
         )}
 
@@ -513,17 +545,17 @@ const TodosScreen = () => {
         }}
         showsVerticalScrollIndicator={false}
         // view the todos based on the selected filter button
-        data={todos.filter(item => {
+        data={TodosArray.sorted('createdAt', true).filter(item => {
           switch (filterBtn) {
             case 0:
               return item;
             case 1:
-              return item.completed;
+              return item.isCompleted;
             case 2:
-              return item.completed == false;
+              return item.isCompleted == false;
           }
         })}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item._id.toHexString()}
         renderItem={({item, index}) => <RenderTodos {...{item, index}} />}
       />
 

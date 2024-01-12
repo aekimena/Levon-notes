@@ -1,27 +1,35 @@
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  useColorScheme,
-  useWindowDimensions,
-} from 'react-native';
+import {Pressable, StyleSheet, Text, View, useColorScheme} from 'react-native';
 import React, {useContext, useState} from 'react';
 import Modal from 'react-native-modal';
 import Icon2 from 'react-native-vector-icons/Ionicons';
 import {useDispatch} from 'react-redux';
 import {TodosContext} from '../contexts/todosContext';
-import {deleteSelected} from '../redux/features/todosCollection';
+
+import {useQuery, useRealm} from '@realm/react';
+import {Todos} from '../realm/todosModel';
+import {deleteSelectedAlerts} from '../components/notificationHandler';
 
 const TodoConfirmationModal = () => {
+  const realm = useRealm();
+  const TodosArray = useQuery(Todos);
   const {showTodoModal, setShowTodoModal, setAllSelectedTodosFalse} =
     useContext(TodosContext);
   const colorScheme = useColorScheme();
-  const dispatch = useDispatch();
   const themeColor = '#60B1D6';
   const currentTextColor = colorScheme == 'dark' ? '#fff' : '#222';
+
+  const innerStyle = StyleSheet.create({
+    infoBox: {
+      backgroundColor: colorScheme == 'dark' ? '#222' : '#fff',
+      height: 'auto',
+      borderRadius: 10,
+      paddingVertical: 15,
+      gap: 10,
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+      width: '100%',
+    },
+  });
 
   return (
     <View>
@@ -42,19 +50,7 @@ const TodoConfirmationModal = () => {
             flex: 1,
             justifyContent: 'flex-end',
           }}>
-          <View
-            style={{
-              backgroundColor: colorScheme == 'dark' ? '#222' : '#fff',
-              height: 'auto',
-              borderRadius: 10,
-              paddingVertical: 15,
-
-              gap: 10,
-
-              justifyContent: 'center',
-              alignItems: 'flex-start',
-              width: '100%',
-            }}>
+          <View style={innerStyle.infoBox}>
             <View style={{paddingHorizontal: 15, gap: 7, paddingBottom: 10}}>
               <Text
                 style={{
@@ -96,8 +92,16 @@ const TodoConfirmationModal = () => {
               </Pressable>
               <Pressable
                 onPress={() => {
-                  dispatch(deleteSelected());
                   setShowTodoModal(false);
+                  deleteSelectedAlerts(TodosArray);
+                  TodosArray.map(item => {
+                    if (item.isSelected) {
+                      realm.write(() => {
+                        realm.delete(item);
+                      });
+                    }
+                  });
+
                   setAllSelectedTodosFalse();
                 }}>
                 <Text

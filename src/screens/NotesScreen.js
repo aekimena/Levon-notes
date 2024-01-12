@@ -4,7 +4,6 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   View,
   useColorScheme,
 } from 'react-native';
@@ -13,81 +12,75 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon2 from 'react-native-vector-icons/Ionicons';
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import {useNavigation} from '@react-navigation/native';
-import {useDispatch, useSelector} from 'react-redux';
+
 import {NotesContext} from '../contexts/notesContext';
-import {
-  selectAllFalse,
-  selectAllTrue,
-  selectToDelete,
-} from '../redux/features/notescCollection';
+import {useRealm, useQuery} from '@realm/react';
+import {Notes} from '../realm/notesModel';
+
 import NoteConfirmationModal from '../Modals/NoteConfirmationModal';
 
 const NotesScreen = () => {
   const {
-    isNoteItemSelected,
-    setIsNoteItemSelected,
+    // isNoteItemSelected,
+    // setIsNoteItemSelected,
     anyNoteItemSelected,
     setAnyNoteItemSelected,
     setAllSelectedNotesFalse,
   } = useContext(NotesContext);
+  // realm stuff
+  const realm = useRealm();
+  const NotesArray = useQuery(Notes);
+  //
   const colorScheme = useColorScheme();
   const themeColor = '#60B1D6';
   const currentTextColor = colorScheme == 'dark' ? '#fff' : '#222';
   const currentBgColor = colorScheme == 'dark' ? '#111' : '#fff';
   const currentTextinputBg = colorScheme == 'dark' ? '#222' : '#F8F8F8';
   const navigation = useNavigation();
-  const notes = useSelector(state => state.notesCollection.notesArray);
-  const dispatch = useDispatch();
 
-  const noItemSelected = notes.findIndex(obj => obj.selected == true); // check if no notes are aelected
-  const allItemSelected = notes.filter(todo => todo.selected == true); // get all selected notes
+  const noItemSelected = NotesArray.findIndex(obj => obj.isSelected == true); // check if no notes are aelected
+  const allItemSelected = NotesArray.filter(obj => obj.isSelected == true); // get all selected notes
 
   // handle select all or select none
   function setAllSelectedTrue() {
-    allItemSelected.length == notes.length
-      ? notes.map(note => {
-          dispatch(selectAllFalse(note));
+    allItemSelected.length == NotesArray.length
+      ? NotesArray.map(note => {
+          realm.write(() => {
+            note.isSelected = false;
+          });
         })
-      : notes.map(note => {
-          dispatch(selectAllTrue(note));
+      : NotesArray.map(note => {
+          realm.write(() => {
+            note.isSelected = true;
+          });
         });
   }
 
+  // component to render todo items
   const RenderNotes = ({item, index}) => {
-    let startIndex = 0;
-    function checkIndex() {
-      while (startIndex < notes.length + 5) {
-        const newArray = notes.slice(startIndex, startIndex + 5);
-        switch (newArray.indexOf(item)) {
-          case 0:
-            return '#FFE2D9';
-          case 1:
-            return '#D9E0FF';
-          case 2:
-            return '#EEEEEE';
-          case 3:
-            return '#C4FFE4';
-          case 4:
-            return '#EBFFC4';
-        }
-        startIndex += 5;
-      }
-    }
-
     return (
       <Pressable
         onPress={() => {
-          anyNoteItemSelected ? null : navigation.navigate('editNote', {item});
+          if (anyNoteItemSelected) {
+            realm.write(() => {
+              item.isSelected = !item.isSelected;
+            });
+          } else {
+            navigation.navigate('editNote', {item});
+          }
         }}
         onLongPress={() => {
-          setIsNoteItemSelected(true);
+          // setIsNoteItemSelected(true);
           setAnyNoteItemSelected(true);
-          dispatch(selectToDelete(item));
+
+          realm.write(() => {
+            item.isSelected = !item.isSelected;
+          });
         }}
         style={[
           innerStyle.noteBox,
           {
-            backgroundColor: checkIndex(),
+            backgroundColor: currentTextinputBg,
           },
         ]}>
         <View style={{justifyContent: 'space-evenly', gap: 4, flex: 1}}>
@@ -102,9 +95,14 @@ const NotesScreen = () => {
           </Text>
         </View>
         {anyNoteItemSelected && (
-          <Pressable onPress={() => dispatch(selectToDelete(item))}>
+          <Pressable
+            onPress={() => {
+              realm.write(() => {
+                item.isSelected = !item.isSelected;
+              });
+            }}>
             <Icon
-              name={item.selected ? 'square-check' : 'square'}
+              name={item.isSelected ? 'square-check' : 'square'}
               size={25}
               color={themeColor}
             />
@@ -138,7 +136,7 @@ const NotesScreen = () => {
     },
     noteBoxBody: {
       fontSize: 20,
-      fontWeight: '400',
+      fontWeight: '500',
       color: '#333',
     },
     noteBoxTime: {
@@ -193,7 +191,7 @@ const NotesScreen = () => {
             <Pressable onPress={setAllSelectedTrue}>
               <Icon
                 name={
-                  allItemSelected.length == notes.length
+                  allItemSelected.length == NotesArray.length
                     ? 'square-check'
                     : 'square'
                 }
@@ -205,23 +203,34 @@ const NotesScreen = () => {
         ) : (
           <>
             <Text style={innerStyle.headerText}>Notes</Text>
-            <View style={innerStyle.textinputContainer}>
-              <TextInput
-                style={innerStyle.textinput}
-                placeholder="Search notes"
-              />
+            <Pressable
+              style={innerStyle.textinputContainer}
+              onPress={() => navigation.navigate('searchNotes')}>
+              <Text
+                style={{
+                  alignSelf: 'flex-start',
+                  fontSize: 20,
+                  color: colorScheme == 'dark' ? '#fff' : '#888',
+                  paddingHorizontal: 5,
+                }}>
+                Search notes
+              </Text>
               <View style={{position: 'absolute', left: 5}}>
-                <Icon2 name="search-outline" color="#ccc" size={30} />
+                <Icon2
+                  name="search-outline"
+                  color={colorScheme == 'dark' ? '#fff' : '#888'}
+                  size={30}
+                />
               </View>
-            </View>
+            </Pressable>
           </>
         )}
       </View>
       <FlatList
         contentContainerStyle={{paddingVertical: 5, gap: 15}}
         showsVerticalScrollIndicator={false}
-        data={notes}
-        keyExtractor={item => item.id}
+        data={NotesArray.sorted('createdAt', true)}
+        keyExtractor={item => item._id.toHexString()}
         renderItem={({item, index}) => <RenderNotes {...{item, index}} />}
       />
     </SafeAreaView>

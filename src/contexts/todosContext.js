@@ -1,33 +1,32 @@
 import React, {useState, useRef, useEffect} from 'react';
-import {useDispatch, useSelector} from 'react-redux';
-import {selectAllFalse} from '../redux/features/todosCollection';
+
+import {useQuery, useRealm} from '@realm/react';
+import {Todos} from '../realm/todosModel';
 
 export const TodosContext = React.createContext();
 
 const TodosContextProvider = ({children}) => {
-  const todos = useSelector(state => state.todosCollection.todosArray);
-  const dispatch = useDispatch();
+  const realm = useRealm();
+  const TodosArray = useQuery(Todos);
 
-  const [isTodoItemSelected, setIsTodoItemSelected] = useState(false);
+  const [anyTodoItemSelected, setAnyTodoItemSelected] = useState(false); // is select mode active?
+  const [addBoxShown, setAddBoxShown] = useState(false); // show or hide add new todo modal
 
-  const [anyTodoItemSelected, setAnyTodoItemSelected] = useState(false);
-  const [addBoxShown, setAddBoxShown] = useState(false);
+  const [showTodoModal, setShowTodoModal] = useState(false); // show or hide todo delete modal
 
-  const [showTodoModal, setShowTodoModal] = useState(false);
-
+  // function to set all todo items selected or not
   function setAllSelectedTodosFalse() {
-    setIsTodoItemSelected(false);
     setAnyTodoItemSelected(false);
-    todos.map(todo => {
-      dispatch(selectAllFalse(todo));
+    TodosArray.map(todo => {
+      realm.write(() => {
+        todo.isSelected = false;
+      });
     });
   }
 
   return (
     <TodosContext.Provider
       value={{
-        isTodoItemSelected,
-        setIsTodoItemSelected,
         anyTodoItemSelected,
         setAnyTodoItemSelected,
         setAllSelectedTodosFalse,
