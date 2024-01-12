@@ -1,1 +1,20 @@
 ## Levon notes (notes/todos/reminder app)
+![Screenshot_1705068200](https://github.com/aekimena/Levon-notes/assets/129546723/07c4eee4-8ee3-4a98-9fc4-1ed0745824a0)
+--
+![Screenshot_1705068671](https://github.com/aekimena/Levon-notes/assets/129546723/1c890217-8d07-4867-b916-7f015847035b)
+--
+![Screenshot_1705068808](https://github.com/aekimena/Levon-notes/assets/129546723/90e04877-5b91-4d6f-8b92-05ca653870c9)
+--
+![Screenshot_1705068211](https://github.com/aekimena/Levon-notes/assets/129546723/1aebd6e5-5d79-45ee-9b79-5d5dbdddcb1f)
+--
+![Screenshot_1705068283](https://github.com/aekimena/Levon-notes/assets/129546723/165fc522-a9ff-4411-ac51-83b2044aa636)
+--
+![Screenshot_1705068297](https://github.com/aekimena/Levon-notes/assets/129546723/f175e8f0-c460-42b8-b6fc-a44ccf35d8d7)
+--
+![Screenshot_1705068422](https://github.com/aekimena/Levon-notes/assets/129546723/2cd9d94d-f21e-478d-87b9-b1aab8fd9155)
+--
+![Screenshot_1705068435](https://github.com/aekimena/Levon-notes/assets/129546723/a14b05ad-745f-4e74-ac69-40fab5f1df37)
+--
+![Screenshot_1705067828](https://github.com/aekimena/Levon-notes/assets/129546723/d2d6ad61-aa14-48b7-9bf6-2d728ed55b4a)
+--
+![Screenshot_1705067714](https://github.com/aekimena/Levon-notes/assets/129546723/836f2f81-cc10-4861-a6ff-96883787a48b)
