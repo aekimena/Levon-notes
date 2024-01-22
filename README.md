@@ -20,9 +20,3 @@ Sharing your thoughts and tasks with Levon Notes is a breeze – easily post you
 ![Screenshot_1705068297](https://github.com/aekimena/Levon-notes/assets/129546723/f175e8f0-c460-42b8-b6fc-a44ccf35d8d7)
 --
 ![Screenshot_1705068422](https://github.com/aekimena/Levon-notes/assets/129546723/2cd9d94d-f21e-478d-87b9-b1aab8fd9155)
---
-![Screenshot_1705068435](https://github.com/aekimena/Levon-notes/assets/129546723/a14b05ad-745f-4e74-ac69-40fab5f1df37)
---
-![Screenshot_1705067828](https://github.com/aekimena/Levon-notes/assets/129546723/d2d6ad61-aa14-48b7-9bf6-2d728ed55b4a)
---
-![Screenshot_1705067714](https://github.com/aekimena/Levon-notes/assets/129546723/836f2f81-cc10-4861-a6ff-96883787a48b)
